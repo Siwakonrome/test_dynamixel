@@ -14,10 +14,7 @@ DXL_MINIMUM_POSITION_LIMIT  = 180
 DXL_MAXIMUM_POSITION_LIMIT  = 1800 
 DXL_MINIMUM_POSITION_VALUE  = 0   
 DXL_MAXIMUM_POSITION_VALUE  = 4095 
-DXL_MOVING_STATUS_THRESHOLD = 10           
-
-
-
+DXL_MOVING_STATUS_THRESHOLD = 20           
 
 
 
@@ -43,16 +40,6 @@ class DynamixelDriver:
         else:
             print("Failed to change the baudrate")
 
-    def dxl_position_to_degree(self, dxl : int) -> float:
-        y_intercept : float = 360.0 - ( ( 360.0 / (DXL_MAXIMUM_POSITION_VALUE - DXL_MINIMUM_POSITION_VALUE) ) * DXL_MAXIMUM_POSITION_VALUE)
-        degree : float = ( 360.0 / (DXL_MAXIMUM_POSITION_VALUE - DXL_MINIMUM_POSITION_VALUE) ) * dxl + y_intercept
-        return degree 
-
-    def degree_to_dxl_position(self, degree : float) -> int:
-        y_intercept : float = DXL_MAXIMUM_POSITION_VALUE - ( ( (DXL_MAXIMUM_POSITION_VALUE - DXL_MINIMUM_POSITION_VALUE) / 360.0 ) * 360.0)
-        dxl_position : float =  ( (DXL_MAXIMUM_POSITION_VALUE - DXL_MINIMUM_POSITION_VALUE) / 360.0 )  * degree + y_intercept
-        return int(dxl_position)
-
     def get_current_position(self) -> dict:
         self.dxl_present_position, dxl_comm_result, dxl_error = self.packetHandler.read4ByteTxRx(self.portHandler, DXL_ID, ADDR_PRO_PRESENT_POSITION)
         if dxl_comm_result != COMM_SUCCESS:
@@ -72,12 +59,12 @@ class DynamixelDriver:
             print("Dynamixel has been successfully connected")
         self.from_current_position : dict = self.get_current_position()
         self.dxl_present_position, dxl_comm_result, dxl_error = self.from_current_position["position"], self.from_current_position["comm"], self.from_current_position["error"]
-        print(self.dxl_position_to_degree(dxl=self.dxl_present_position))
+        print(self.dxl_present_position)
         while 1:
 
             if self.from_current_position["ret"] is False and self.from_current_position is not None:
                 break 
-            goal_position : int = self.degree_to_dxl_position(degree=float(input("")))     
+            goal_position : int = int(input(""))    
             if (goal_position >= DXL_MINIMUM_POSITION_LIMIT and goal_position <= DXL_MAXIMUM_POSITION_LIMIT) is False:
                 print("Goal position out of limit")
                 break
@@ -96,7 +83,7 @@ class DynamixelDriver:
                     print("%s" % self.packetHandler.getTxRxResult(dxl_comm_result))
                 elif dxl_error != 0:
                     print("%s" % self.packetHandler.getRxPacketError(dxl_error))
-                print(f"[ID:{DXL_ID}] GoalPos:{self.dxl_position_to_degree(dxl=goal_position)}  PresPos:{self.dxl_position_to_degree(dxl=self.dxl_present_position)}") 
+                print(f"[ID:{DXL_ID}] GoalPos:{goal_position}  PresPos:{self.dxl_present_position}") 
                 if not abs(goal_position - self.dxl_present_position) > DXL_MOVING_STATUS_THRESHOLD: 
                     break
         dxl_comm_result, dxl_error = self.packetHandler.write1ByteTxRx(self.portHandler, DXL_ID, ADDR_PRO_TORQUE_ENABLE, TORQUE_DISABLE)
